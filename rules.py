@@ -64,7 +64,7 @@ def _gray(path):
     img = _arr(path)
     if img is None:
         return None
-    return _downscale(cv2.cvtColor(img, cv2.COLOR_BGR2GRAY))
+    return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 
 @lru_cache(maxsize=256)
@@ -131,6 +131,18 @@ def rule3_template(target, input_path):
         nd_g = _gray(input_path)
         if src_g is None or nd_g is None:
             return out
+        # I added the following three lines of code to resolve the cropping problem with rule 3
+        # I used Google to help me find out how to downscale the images --- it provided the general format and then I altered to match the prompt
+        # This is the webpage I used to help with the downscaling described below: https://opencv.org/resizing-and-rescaling-images-with-opencv/
+        # This first line figures out how much to shrink the original pic so its longest side is 512 pixels - the number 512 comes from earlier when _downscale uses max_dim=512
+        s = min(1.0, 512 / max(src_g.shape))
+        # This second line shrinks the original by that amount, so that the search just runs faster
+        # src_g is the source image, setting dsize to None tells python to calculate the final image size auto., fx=s is the horizontal scale (x-axis), and fy=s is the vertical scale 
+        src_g = cv2.resize(src_g, None, fx=s, fy=s)
+        # This third and final line shrinks the suspect by the same amount, so a cropped image stays the right size to line up w/ the part of the original it came from
+        # It does the same thing as the previous line of code, but applies it to the matching image
+        # In sum, the three lines of code make sure that the original image and its crop are shrunk by the same amount
+        nd_g = cv2.resize(nd_g, None, fx=s, fy=s)
         if (src_g.shape[0] < nd_g.shape[0]) or (src_g.shape[1] < nd_g.shape[1]):
             nd_g = cv2.resize(nd_g, (min(nd_g.shape[1], src_g.shape[1]),
                                      min(nd_g.shape[0], src_g.shape[0])))

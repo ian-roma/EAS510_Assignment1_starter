@@ -63,7 +63,8 @@ def _downscale(img, max_dim=512):
 def _gray(path):
     img = _arr(path)
     if img is None:
-        return None
+       return None
+    # Removed the downscale
     return cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
 

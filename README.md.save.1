@@ -1,0 +1,97 @@
+# EAS 510 - Assignment 1: Digital Forensics Apprentice
+
+A rule-based expert system that matches modified images back to their originals.
+
+This is the **starter repository** for Project 1. Two repositories matter:
+
+| Repository | Role |
+|------------|------|
+| `delveccj/EAS510_Assignment1_starter` (this repo) | Your **code** lives here. You will fork it, work in your fork, and push your final submission here. |
+| `delveccj/EAS510_Assignment1` | The **dataset** (read-only). Clone it for the images; never commit it to your fork. |
+
+## Setup on your Codio box
+
+```bash
+# 1. Fork this repo on GitHub, then in your box:
+git clone https://github.com/YOUR-USERNAME/EAS510_Assignment1_starter.git
+cd EAS510_Assignment1_starter
+
+# 2. Clone the read-only dataset as a sibling folder (images live there):
+cd ~/workspace
+git clone https://github.com/delveccj/EAS510_Assignment1.git
+
+# 3. Install dependencies:
+cd ~/workspace/EAS510_Assignment1_starter
+python3 -m pip install -r requirements.txt
+
+# 4. Point this box at YOUR fork (run once):
+./setup_git.sh
+```
+
+## Repository layout
+
+```
+forensics_detective.py   SimpleDetector: register targets + find_best_match
+rules.py                 Rule functions (Rule 1: Metadata, Rule 2: Histogram, Rule 3: Template)
+test_system.py           Runs the detector over the data folders and writes results_*.txt
+scripts/check_output_format.py   Validates a results file against the required format
+setup_git.sh, submit.sh  One-time setup + commit/push helper ("backup button")
+```
+
+## The task in one paragraph
+
+Implement three interpretable rules (metadata, color histogram, template matching)
+that combine into a 0-100 confidence score. Run your system on `modified_images/`
+and `random/` and save the full output as `results_v1.txt`. In Phase 2, run on
+`hard/`, diagnose a systematic failure, add a **Rule 4**, and save
+`results_v1_hard.txt` and `results_v2.txt`. Full instructions are in the Codio guide
+and in the assignment PDF in UBLearns.
+
+## Running
+
+```bash
+# Phase 1 (easy + random) -> results_v1.txt
+python3 test_system.py --modified --random --output results_v1.txt
+
+# Phase 1 on hard cases -> results_v1_hard.txt
+python3 test_system.py --hard --output results_v1_hard.txt
+
+# Phase 2 (everything) -> results_v2.txt
+python3 test_system.py --modified --hard --random --output results_v2.txt
+
+# Validate any results file against the required format:
+python3 scripts/check_output_format.py results_v1.txt
+```
+
+The data folders are resolved from a sibling clone of `EAS510_Assignment1`.
+If your data is elsewhere, pass `--data-dir /path/to/EAS510_Assignment1`.
+
+## Output format (do not alter)
+
+```
+Processing: modified_image_01.jpg
+Rule 1 (Metadata): FIRED - Size ratio 0.85 -> 20/30 points
+Rule 2 (Histogram): FIRED - Correlation 0.92 -> 25/30 points
+Rule 3 (Template): FIRED - Match score 0.76 -> 30/40 points
+Final Score: 75/100 -> MATCH to original_03.jpg
+```
+
+## Backup doctrine
+
+Your Codio box can be reset at any time. **Your fork on GitHub is the only safe
+copy.** After every milestone run `./submit.sh "describe what you did"`. A box
+restart never touches GitHub.
+
+## License
+
+Apache 2.0. See `LICENSE`.
+
+## EAS510 Responses - Roma
+## Observed weakness in V1: what failed and why
+In the baseline model, I noticed that 32 images matched and 43 were rejected, for a failing rate of 43%. While no images were falsely accepted, the model failed to specifically identify cropped photos properly - in other words, the template rule failed. The instructional guide mentioned that this template is "sensitive to rotation and scale", providing the likely reason as to why this rule failed. So, further following recommendations from the instructions, I am removing the downscale from rule 3. Therefore, both the original and the crop should stay at their real pixel size - or, ensure that they are at the same scale so the crop can line up inside the original. 
+## Design decision for V2: what Rule 4 is and why you chose it
+Upon executive the revised rule 3 on the hard images in V2, I noticed that 47 photos matched their originals, and 13 did not. I went down the list of all checks and found a common error in the combination of resized and compressed images, where V1 only correctly identitfied 4 out of 10 of these pairs. While other combinations found some inconsistencies, this was the section with the largest errors. To account for this issue, I took a recommendation from the instructions and, upon doing research on the python website, I found that multi-scale template matching was the best option. 
+## Effect of the change: accuracy before/after on easy vs hard
+Before I made changes in V2, the model was running at 47 photos correctly matched and 13 photos that didn't match, for a correctness rate of 78.3%. With the updated model that includes rule 4 107 correctly matched and 28 were rejected, marking a very slight increase in the correctness rate to 79.3%. While this is only slightly better than the V1 code, the model ensures that there are no false rejects for the random noise photos. Taken together, rule 4 did not provide too much benefit to the model but it by no means weakened its power. 
+## Trade-offs: what new costs or risks did Rule 4 introduce
+First, one of the most visible costs of the rule 4 introduction is that the revised model is notably much slower than V1, which only contained 3 rules. Whereas V1 took maybe a minute to run, the revised model took about 2-3 minutes to run and without much noticable gain (i.e., one percentage point increase from the previous model). Second, and while I am not very sure of this critique, the revised model may be counting evidence twice as it is re-checking the potential for resizing and compression. These are both covered in other rules, and while combining them may provide some benefits of singling out these dual incidents, the additional percentage point increase may reflect the measurement of the same thing, which suggests that the rules are no longer serving as independent votes. Lastly, and perhaps most importantly, my rule 4 does address the other failures of the previous three models - specifically, rotation, brightness, or contrast. I maintain the same grayscale pattern comparison as rule 4, just at more sizes. A rotated or re-lit image still lines up pooly, so those weae
